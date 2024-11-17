@@ -1,47 +1,47 @@
-local CmdBar = script.Parent:WaitForChild("CmdBar") -- Assumes CmdBar is a TextBox UI element in the GUI
-local Prefix = "CMD_CIR" -- Prefix for chat commands
+local CmdBar = script.Parent:WaitForChild("CmdBar") -- The command bar input box UI element
+local Prefix = "CMD_CIR" -- Prefix for commands in chat
 local Commands = {
-    speed = {args = {"[speed]"}, callback = function(args)
-        -- Handle speed logic
+    speed = {aliases = {"speed"}, args = {"[speed]"}, callback = function(args)
         local speed = tonumber(args[1])
         if speed then
             game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = speed
         end
     end},
-    loopspeed = {args = {"[speed]"}, callback = function(args)
-        -- Handle loopspeed logic
+    loopspeed = {aliases = {"loopspeed", "lspeed"}, args = {"[speed]"}, callback = function(args)
         local speed = tonumber(args[1])
         if speed then
-            -- Loop speed logic here
+            -- Loop speed logic
         end
     end},
-    jumppower = {args = {"[power]"}, callback = function(args)
-        -- Handle jumppower logic
+    jumppower = {aliases = {"jumppower", "jp"}, args = {"[power]"}, callback = function(args)
         local power = tonumber(args[1])
         if power then
             game.Players.LocalPlayer.Character.Humanoid.JumpPower = power
         end
     end},
-    loopjumpower = {args = {"[power]"}, callback = function(args)
-        -- Handle loopjumpower logic
+    loopjumpower = {aliases = {"loopjumpower", "ljp", "loopjp"}, args = {"[power]"}, callback = function(args)
         local power = tonumber(args[1])
         if power then
-            -- Loop jump power logic here
+            -- Loop jump power logic
         end
     end},
 }
 
--- Function to update the command bar based on input
+-- Function to update the command bar based on the query
 local function updateCmdBar(query)
     CmdBar.Text = query
     local matchingCommands = {}
 
     for cmd, data in pairs(Commands) do
-        if cmd:sub(1, #query):lower() == query:lower() then
-            table.insert(matchingCommands, cmd .. " " .. table.concat(data.args, " "))
+        -- Check if the command or alias matches the query
+        for _, alias in ipairs(data.aliases) do
+            if alias:sub(1, #query):lower() == query:lower() then
+                table.insert(matchingCommands, alias .. " " .. table.concat(data.args, " "))
+            end
         end
     end
 
+    -- If no matching commands found, display placeholder text
     if #matchingCommands == 0 then
         CmdBar.Text = "No matching commands."
     else
@@ -49,12 +49,12 @@ local function updateCmdBar(query)
     end
 end
 
--- Command Bar input listener
+-- Handle text input in the CmdBar
 CmdBar:GetPropertyChangedSignal("Text"):Connect(function()
     updateCmdBar(CmdBar.Text)
 end)
 
--- Function to handle command execution
+-- Function to execute the command when a user presses Enter
 local function executeCommand(commandText)
     local cmd, argsString = commandText:match("^(%S+)%s*(.*)")
     local args = {}
@@ -65,14 +65,16 @@ local function executeCommand(commandText)
         end
     end
 
-    -- Find the command and execute the callback
-    local command = Commands[cmd:lower()]
-    if command then
-        command.callback(args)
+    -- Find the command and execute its callback
+    for cmdName, data in pairs(Commands) do
+        if table.find(data.aliases, cmd:lower()) then
+            data.callback(args)
+            return
+        end
     end
 end
 
--- Listen for Enter key in the CmdBar (command bar)
+-- Listen for the "Enter" key press to execute the command
 CmdBar.FocusLost:Connect(function(enterPressed)
     if enterPressed and CmdBar.Text and #CmdBar.Text > 0 then
         executeCommand(CmdBar.Text)
@@ -83,7 +85,10 @@ end)
 -- Chat command handling with prefix
 game.Players.LocalPlayer.Chatted:Connect(function(message)
     if message:sub(1, #Prefix) == Prefix then
-        local cmdText = message:sub(#Prefix + 2)
+        local cmdText = message:sub(#Prefix + 2) -- Remove prefix
         executeCommand(cmdText)
     end
 end)
+
+-- Initialize CmdBar's position (bottom-right)
+CmdBar.Position = UDim2.new(1, -200, 1, -50) -- Adjust the position as per your UI
