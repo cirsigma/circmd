@@ -2,7 +2,7 @@
 
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-
+ 
 -- Create the ScreenGui for the command bar
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CommandBarGUI"
