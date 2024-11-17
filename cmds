@@ -1,131 +1,89 @@
--- Command System Setup
-local prefix = "!" -- Default prefix
-local commands = {}
-
--- Add command with aliases
-local function addCommand(aliases, func)
-    for _, alias in ipairs(aliases) do
-        commands[alias] = func
-    end
-end
-
--- Execute command
-local function executeCommand(input)
-    local args = input:split(" ")
-    local commandName = args[1]
-    table.remove(args, 1)
-
-    if commands[commandName] then
-        commands[commandName](args)
-    else
-        print("Unknown command: " .. commandName)
-    end
-end
-
--- Chat Input Handling
-game:GetService("Players").LocalPlayer.Chatted:Connect(function(msg)
-    if msg:sub(1, #prefix) == prefix then
-        local input = msg:sub(#prefix + 1)
-        executeCommand(input)
-    end
-end)
-
--- Add commands
-addCommand({"speed"}, function(args)
-    local speed = tonumber(args[1])
-    if speed then
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = speed
-        print("Set WalkSpeed to " .. speed)
-    else
-        print("Invalid speed value.")
-    end
-end)
-
-addCommand({"loopspeed", "lspeed"}, function(args)
-    local speed = tonumber(args[1])
-    if speed then
-        while true do
+local CmdBar = script.Parent:WaitForChild("CmdBar") -- Assumes CmdBar is a TextBox UI element in the GUI
+local Prefix = "CMD_CIR" -- Prefix for chat commands
+local Commands = {
+    speed = {args = {"[speed]"}, callback = function(args)
+        -- Handle speed logic
+        local speed = tonumber(args[1])
+        if speed then
             game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = speed
-            task.wait(0.1)
         end
-    else
-        print("Invalid speed value.")
-    end
-end)
-
-addCommand({"jumppower", "jp"}, function(args)
-    local power = tonumber(args[1])
-    if power then
-        game.Players.LocalPlayer.Character.Humanoid.JumpPower = power
-        print("Set JumpPower to " .. power)
-    else
-        print("Invalid power value.")
-    end
-end)
-
-addCommand({"loopjumppower", "ljp", "loopjp"}, function(args)
-    local power = tonumber(args[1])
-    if power then
-        while true do
+    end},
+    loopspeed = {args = {"[speed]"}, callback = function(args)
+        -- Handle loopspeed logic
+        local speed = tonumber(args[1])
+        if speed then
+            -- Loop speed logic here
+        end
+    end},
+    jumppower = {args = {"[power]"}, callback = function(args)
+        -- Handle jumppower logic
+        local power = tonumber(args[1])
+        if power then
             game.Players.LocalPlayer.Character.Humanoid.JumpPower = power
-            task.wait(0.1)
         end
-    else
-        print("Invalid power value.")
+    end},
+    loopjumpower = {args = {"[power]"}, callback = function(args)
+        -- Handle loopjumpower logic
+        local power = tonumber(args[1])
+        if power then
+            -- Loop jump power logic here
+        end
+    end},
+}
+
+-- Function to update the command bar based on input
+local function updateCmdBar(query)
+    CmdBar.Text = query
+    local matchingCommands = {}
+
+    for cmd, data in pairs(Commands) do
+        if cmd:sub(1, #query):lower() == query:lower() then
+            table.insert(matchingCommands, cmd .. " " .. table.concat(data.args, " "))
+        end
     end
-end)
 
--- UI Command Bar
-local screenGui = Instance.new("ScreenGui", game.Players.LocalPlayer:WaitForChild("PlayerGui"))
-local cmdBar = Instance.new("TextBox", screenGui)
-cmdBar.Size = UDim2.new(0, 300, 0, 40)
-cmdBar.Position = UDim2.new(0.5, -150, 1, -50)
-cmdBar.AnchorPoint = Vector2.new(0.5, 1)
-cmdBar.PlaceholderText = "Enter command..."
-cmdBar.Text = ""
-cmdBar.Visible = true
-
-local cmdList = Instance.new("ScrollingFrame", screenGui)
-cmdList.Size = UDim2.new(0, 300, 0, 200)
-cmdList.Position = UDim2.new(0.5, -150, 1, -100)
-cmdList.AnchorPoint = Vector2.new(0.5, 1)
-cmdList.Visible = false
-
-local function refreshCmdList(filter)
-    cmdList:ClearAllChildren()
-    local yPos = 0
-
-    for alias, _ in pairs(commands) do
-        if not filter or alias:sub(1, #filter) == filter then
-            local cmdLabel = Instance.new("TextLabel", cmdList)
-            cmdLabel.Size = UDim2.new(1, 0, 0, 25)
-            cmdLabel.Position = UDim2.new(0, 0, 0, yPos)
-            cmdLabel.Text = alias
-            cmdLabel.TextSize = 14
-            cmdLabel.BackgroundTransparency = 1
-            yPos += 25
-        end
+    if #matchingCommands == 0 then
+        CmdBar.Text = "No matching commands."
+    else
+        CmdBar.Text = table.concat(matchingCommands, "\n")
     end
 end
 
-cmdBar.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        local input = cmdBar.Text
-        cmdBar.Text = ""
-        executeCommand(input)
+-- Command Bar input listener
+CmdBar:GetPropertyChangedSignal("Text"):Connect(function()
+    updateCmdBar(CmdBar.Text)
+end)
+
+-- Function to handle command execution
+local function executeCommand(commandText)
+    local cmd, argsString = commandText:match("^(%S+)%s*(.*)")
+    local args = {}
+
+    if argsString and #argsString > 0 then
+        for arg in argsString:gmatch("%S+") do
+            table.insert(args, arg)
+        end
+    end
+
+    -- Find the command and execute the callback
+    local command = Commands[cmd:lower()]
+    if command then
+        command.callback(args)
+    end
+end
+
+-- Listen for Enter key in the CmdBar (command bar)
+CmdBar.FocusLost:Connect(function(enterPressed)
+    if enterPressed and CmdBar.Text and #CmdBar.Text > 0 then
+        executeCommand(CmdBar.Text)
+        CmdBar.Text = "" -- Clear the command bar after execution
     end
 end)
 
-cmdBar:GetPropertyChangedSignal("Text"):Connect(function()
-    local filter = cmdBar.Text
-    if filter == "" then
-        cmdList.Visible = false
-    else
-        cmdList.Visible = true
-        refreshCmdList(filter)
+-- Chat command handling with prefix
+game.Players.LocalPlayer.Chatted:Connect(function(message)
+    if message:sub(1, #Prefix) == Prefix then
+        local cmdText = message:sub(#Prefix + 2)
+        executeCommand(cmdText)
     end
 end)
-
--- Initialize
-refreshCmdList()
-cmdList.Visible = true
