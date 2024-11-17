@@ -1,0 +1,122 @@
+-- LocalScript (placed in StarterGui)
+
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Create the ScreenGui for the command bar
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CommandBarGUI"
+screenGui.Parent = playerGui
+
+-- Command Bar Frame (at the bottom of the screen)
+local commandBarFrame = Instance.new("Frame")
+commandBarFrame.Size = UDim2.new(1, 0, 0, 50)
+commandBarFrame.Position = UDim2.new(0, 0, 1, -50)
+commandBarFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+commandBarFrame.BackgroundTransparency = 0.5
+commandBarFrame.Visible = false  -- Hide by default
+commandBarFrame.Parent = screenGui
+
+-- Command Bar Title (TextLabel at the top of the command bar)
+local commandBarTitle = Instance.new("TextLabel")
+commandBarTitle.Size = UDim2.new(1, 0, 0, 20)
+commandBarTitle.BackgroundTransparency = 1
+commandBarTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+commandBarTitle.Text = "Cir CMDs"  -- Default title
+commandBarTitle.TextSize = 14
+commandBarTitle.TextAlignment = Enum.TextAlignment.Center
+commandBarTitle.Parent = commandBarFrame
+
+-- Command Input Box (TextBox for entering commands)
+local commandInput = Instance.new("TextBox")
+commandInput.Size = UDim2.new(1, 0, 0, 30)
+commandInput.Position = UDim2.new(0, 0, 0, 20)
+commandInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+commandInput.BackgroundTransparency = 0.6
+commandInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+commandInput.PlaceholderText = "Enter command here"
+commandInput.TextSize = 14
+commandInput.ClearTextOnFocus = false
+commandInput.Parent = commandBarFrame
+
+-- Invisible hover area at the top of the command bar
+local commandBarHoverArea = Instance.new("Frame")
+commandBarHoverArea.Size = UDim2.new(1, 0, 0, 10)
+commandBarHoverArea.Position = UDim2.new(0, 0, 0, 0)
+commandBarHoverArea.BackgroundTransparency = 1
+commandBarHoverArea.Parent = commandBarFrame
+
+-- Notification UI (will be displayed when the prefix is changed)
+local notificationFrame = Instance.new("Frame")
+notificationFrame.Size = UDim2.new(0, 300, 0, 40)
+notificationFrame.Position = UDim2.new(0.5, -150, 0, 20)
+notificationFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+notificationFrame.BackgroundTransparency = 0.6
+notificationFrame.Visible = false
+notificationFrame.Parent = screenGui
+
+local notificationLabel = Instance.new("TextLabel")
+notificationLabel.Size = UDim2.new(1, 0, 1, 0)
+notificationLabel.BackgroundTransparency = 1
+notificationLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+notificationLabel.TextSize = 14
+notificationLabel.Text = "Prefix changed to ':'"
+notificationLabel.TextAlignment = Enum.TextAlignment.Center
+notificationLabel.Parent = notificationFrame
+
+-- Default prefix
+local currentPrefix = ":"
+
+-- Function to handle commands typed into the command bar
+local function handleCommand(commandText)
+    local args = string.split(commandText, " ")
+
+    if args[1]:lower() == "prefix" and args[2] then
+        local newPrefix = args[2]
+        if #newPrefix == 1 then
+            currentPrefix = newPrefix
+            updateTitle()  -- Update the title with the new prefix
+            displayNotification("Prefix changed to '" .. newPrefix .. "'")
+            commandInput.Text = ""  -- Clear the text box
+        else
+            displayNotification("Invalid prefix. Please use only one character.")
+        end
+    else
+        displayNotification("Command not recognized or missing arguments.")
+    end
+end
+
+-- Function to update the command bar title with the current prefix
+local function updateTitle()
+    commandBarTitle.Text = "Cir CMDs (" .. currentPrefix .. ")"
+end
+
+-- Function to display notifications for the prefix change or errors
+local function displayNotification(message)
+    notificationLabel.Text = message
+    notificationFrame.Visible = true
+    wait(2)  -- Show the notification for 2 seconds
+    notificationFrame.Visible = false
+end
+
+-- Listen for when the player presses Enter in the command input box
+commandInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local inputText = commandInput.Text
+        if inputText:sub(1, 1) == currentPrefix then  -- Check if input starts with the current prefix
+            handleCommand(inputText:sub(2))  -- Remove the prefix and handle the command
+        else
+            displayNotification("Please start your command with the current prefix.")
+        end
+    end
+end)
+
+-- Show the command bar when hovering over the top area
+commandBarHoverArea.MouseEnter:Connect(function()
+    commandBarFrame.Visible = true
+end)
+
+-- Hide the command bar when not hovering over the top area
+commandBarHoverArea.MouseLeave:Connect(function()
+    commandBarFrame.Visible = false
+end)
