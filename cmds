@@ -1,94 +1,191 @@
-local CmdBar = script.Parent:WaitForChild("CmdBar") -- The command bar input box UI element
-local Prefix = "CMD_CIR" -- Prefix for commands in chat
-local Commands = {
-    speed = {aliases = {"speed"}, args = {"[speed]"}, callback = function(args)
-        local speed = tonumber(args[1])
-        if speed then
-            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = speed
-        end
-    end},
-    loopspeed = {aliases = {"loopspeed", "lspeed"}, args = {"[speed]"}, callback = function(args)
-        local speed = tonumber(args[1])
-        if speed then
-            -- Loop speed logic
-        end
-    end},
-    jumppower = {aliases = {"jumppower", "jp"}, args = {"[power]"}, callback = function(args)
-        local power = tonumber(args[1])
-        if power then
-            game.Players.LocalPlayer.Character.Humanoid.JumpPower = power
-        end
-    end},
-    loopjumpower = {aliases = {"loopjumpower", "ljp", "loopjp"}, args = {"[power]"}, callback = function(args)
-        local power = tonumber(args[1])
-        if power then
-            -- Loop jump power logic
-        end
-    end},
-}
+-- Helper function to check if an input is a number
+local function isNumber(value)
+    return tonumber(value) ~= nil
+end
 
--- Function to update the command bar based on the query
-local function updateCmdBar(query)
-    CmdBar.Text = query
-    local matchingCommands = {}
+-- Command handler (mock function for the script)
+local function addcmd(name, aliases, func)
+    -- Add the command functionality here
+end
 
-    for cmd, data in pairs(Commands) do
-        -- Check if the command or alias matches the query
-        for _, alias in ipairs(data.aliases) do
-            if alias:sub(1, #query):lower() == query:lower() then
-                table.insert(matchingCommands, alias .. " " .. table.concat(data.args, " "))
+-- Function to handle normal flying
+local function sFLY(vfly)
+    repeat wait() until Players.LocalPlayer and Players.LocalPlayer.Character and getRoot(Players.LocalPlayer.Character) and Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    repeat wait() until IYMouse
+    if flyKeyDown or flyKeyUp then flyKeyDown:Disconnect() flyKeyUp:Disconnect() end
+
+    local T = getRoot(Players.LocalPlayer.Character)
+    local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+    local lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+    local SPEED = 0
+
+    local function FLY()
+        FLYING = true
+        local BG = Instance.new('BodyGyro')
+        local BV = Instance.new('BodyVelocity')
+        BG.P = 9e4
+        BG.Parent = T
+        BV.Parent = T
+        BG.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        BG.cframe = T.CFrame
+        BV.velocity = Vector3.new(0, 0, 0)
+        BV.maxForce = Vector3.new(9e9, 9e9, 9e9)
+        task.spawn(function()
+            repeat wait()
+                if not vfly and Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+                    Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid').PlatformStand = true
+                end
+                if CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0 then
+                    SPEED = 50
+                elseif not (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0) and SPEED ~= 0 then
+                    SPEED = 0
+                end
+                if (CONTROL.L + CONTROL.R) ~= 0 or (CONTROL.F + CONTROL.B) ~= 0 or (CONTROL.Q + CONTROL.E) ~= 0 then
+                    BV.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (CONTROL.F + CONTROL.B)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).p) - workspace.CurrentCamera.CoordinateFrame.p)) * SPEED
+                    lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R}
+                elseif (CONTROL.L + CONTROL.R) == 0 and (CONTROL.F + CONTROL.B) == 0 and (CONTROL.Q + CONTROL.E) == 0 and SPEED ~= 0 then
+                    BV.velocity = ((workspace.CurrentCamera.CoordinateFrame.lookVector * (lCONTROL.F + lCONTROL.B)) + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(lCONTROL.L + lCONTROL.R, (lCONTROL.F + lCONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).p) - workspace.CurrentCamera.CoordinateFrame.p)) * SPEED
+                else
+                    BV.velocity = Vector3.new(0, 0, 0)
+                end
+                BG.cframe = workspace.CurrentCamera.CoordinateFrame
+            until not FLYING
+            CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+            lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+            SPEED = 0
+            BG:Destroy()
+            BV:Destroy()
+            if Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+                Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid').PlatformStand = false
+            end
+        end)
+    end
+    flyKeyDown = IYMouse.KeyDown:Connect(function(KEY)
+        if KEY:lower() == 'w' then
+            CONTROL.F = (vfly and vehicleflyspeed or iyflyspeed)
+        elseif KEY:lower() == 's' then
+            CONTROL.B = - (vfly and vehicleflyspeed or iyflyspeed)
+        elseif KEY:lower() == 'a' then
+            CONTROL.L = - (vfly and vehicleflyspeed or iyflyspeed)
+        elseif KEY:lower() == 'd' then
+            CONTROL.R = (vfly and vehicleflyspeed or iyflyspeed)
+        elseif QEfly and KEY:lower() == 'e' then
+            CONTROL.Q = (vfly and vehicleflyspeed or iyflyspeed)*2
+        elseif QEfly and KEY:lower() == 'q' then
+            CONTROL.E = -(vfly and vehicleflyspeed or iyflyspeed)*2
+        end
+        pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Track end)
+    end)
+    flyKeyUp = IYMouse.KeyUp:Connect(function(KEY)
+        if KEY:lower() == 'w' then
+            CONTROL.F = 0
+        elseif KEY:lower() == 's' then
+            CONTROL.B = 0
+        elseif KEY:lower() == 'a' then
+            CONTROL.L = 0
+        elseif KEY:lower() == 'd' then
+            CONTROL.R = 0
+        elseif KEY:lower() == 'e' then
+            CONTROL.Q = 0
+        elseif KEY:lower() == 'q' then
+            CONTROL.E = 0
+        end
+    end)
+    FLY()
+end
+
+-- Function to stop flying
+local function NOFLY()
+    FLYING = false
+    if flyKeyDown or flyKeyUp then flyKeyDown:Disconnect() flyKeyUp:Disconnect() end
+    if Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid') then
+        Players.LocalPlayer.Character:FindFirstChildOfClass('Humanoid').PlatformStand = false
+    end
+    pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end)
+end
+
+-- Function for mobile flight
+local function mobilefly(speaker, vfly)
+    unmobilefly(speaker)
+    FLYING = true
+
+    local root = getRoot(speaker.Character)
+    local camera = workspace.CurrentCamera
+    local v3none = Vector3.new()
+    local v3zero = Vector3.new(0, 0, 0)
+    local v3inf = Vector3.new(9e9, 9e9, 9e9)
+
+    local controlModule = require(speaker.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule"))
+    local bv = Instance.new("BodyVelocity")
+    bv.Name = velocityHandlerName
+    bv.Parent = root
+    bv.MaxForce = v3zero
+    bv.Velocity = v3zero
+
+    local bg = Instance.new("BodyGyro")
+    bg.Name = gyroHandlerName
+    bg.Parent = root
+    bg.MaxTorque = v3inf
+    bg.P = 1000
+    bg.D = 50
+
+    mfly1 = speaker.CharacterAdded:Connect(function()
+        local bv = Instance.new("BodyVelocity")
+        bv.Name = velocityHandlerName
+        bv.Parent = root
+        bv.MaxForce = v3zero
+        bv.Velocity = v3zero
+
+        local bg = Instance.new("BodyGyro")
+        bg.Name = gyroHandlerName
+        bg.Parent = root
+        bg.MaxTorque = v3inf
+        bg.P = 1000
+        bg.D = 50
+    end)
+
+    mfly2 = RunService.RenderStepped:Connect(function()
+        root = getRoot(speaker.Character)
+        camera = workspace.CurrentCamera
+        if speaker.Character:FindFirstChildWhichIsA("Humanoid") and root and root:FindFirstChild(velocityHandlerName) and root:FindFirstChild(gyroHandlerName) then
+            local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid")
+            local VelocityHandler = root:FindFirstChild(velocityHandlerName)
+            local GyroHandler = root:FindFirstChild(gyroHandlerName)
+
+            VelocityHandler.MaxForce = v3inf
+            GyroHandler.MaxTorque = v3inf
+            if not vfly then humanoid.PlatformStand = true end
+            GyroHandler.CFrame = camera.CoordinateFrame
+            VelocityHandler.Velocity = v3none
+
+            local direction = controlModule:GetMoveVector()
+            if direction.X > 0 then
+                VelocityHandler.Velocity = VelocityHandler.Velocity + camera.CFrame.RightVector * (direction.X * ((vfly and vehicleflyspeed or iyflyspeed) * 50))
+            end
+            if direction.X < 0 then
+                VelocityHandler.Velocity = VelocityHandler.Velocity + camera.CFrame.RightVector * (direction.X * ((vfly and vehicleflyspeed or iyflyspeed) * 50))
+            end
+            if direction.Z > 0 then
+                VelocityHandler.Velocity = VelocityHandler.Velocity + camera.CFrame.LookVector * (direction.Z * ((vfly and vehicleflyspeed or iyflyspeed) * 50))
             end
         end
-    end
-
-    -- If no matching commands found, display placeholder text
-    if #matchingCommands == 0 then
-        CmdBar.Text = "No matching commands."
-    else
-        CmdBar.Text = table.concat(matchingCommands, "\n")
-    end
+    end)
 end
 
--- Handle text input in the CmdBar
-CmdBar:GetPropertyChangedSignal("Text"):Connect(function()
-    updateCmdBar(CmdBar.Text)
-end)
+-- Command to toggle flight and adjust speed
+addcmd('fly', {'vfly'}, function(args, speaker)
+    local speed = args[1] or 1  -- Default to 1 if no speed is provided
+    if isNumber(speed) then
+        -- Set the fly speed to the provided value
+        iyflyspeed = speed
 
--- Function to execute the command when a user presses Enter
-local function executeCommand(commandText)
-    local cmd, argsString = commandText:match("^(%S+)%s*(.*)")
-    local args = {}
-
-    if argsString and #argsString > 0 then
-        for arg in argsString:gmatch("%S+") do
-            table.insert(args, arg)
+        -- If not on mobile, use the standard flying method
+        if not IsOnMobile then
+            NOFLY()
+            wait()
+            sFLY()
+        else
+            mobilefly(speaker)
         end
     end
-
-    -- Find the command and execute its callback
-    for cmdName, data in pairs(Commands) do
-        if table.find(data.aliases, cmd:lower()) then
-            data.callback(args)
-            return
-        end
-    end
-end
-
--- Listen for the "Enter" key press to execute the command
-CmdBar.FocusLost:Connect(function(enterPressed)
-    if enterPressed and CmdBar.Text and #CmdBar.Text > 0 then
-        executeCommand(CmdBar.Text)
-        CmdBar.Text = "" -- Clear the command bar after execution
-    end
 end)
-
--- Chat command handling with prefix
-game.Players.LocalPlayer.Chatted:Connect(function(message)
-    if message:sub(1, #Prefix) == Prefix then
-        local cmdText = message:sub(#Prefix + 2) -- Remove prefix
-        executeCommand(cmdText)
-    end
-end)
-
--- Initialize CmdBar's position (bottom-right)
-CmdBar.Position = UDim2.new(1, -200, 1, -50) -- Adjust the position as per your UI
